@@ -1,0 +1,36 @@
+name: Build and Push Docker Image to Aliyun
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Aliyun Docker Registry
+      run: |
+        echo ${{ secrets.ALIYUN_USERNAME }}:${{ secrets.ALIYUN_PASSWORD }} | docker login --username ${{ secrets.ALIYUN_USERNAME }} --password-stdin registry.cn-hangzhou.aliyuncs.com
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v3
+      with:
+        context: .
+        file: docker/Dockerfile.debian-bookworm-arm64-rknpu
+        platforms: linux/arm64
+        push: true
+        tags: registry.cn-hangzhou.aliyuncs.com/${{ secrets.ALIYUN_NAMESPACE }}/monicat:latest
+
+    - name: Verify Docker Image
+      run: docker run --rm registry.cn-hangzhou.aliyuncs.com/${{ secrets.ALIYUN_NAMESPACE }}/vision-simple:latest --version
